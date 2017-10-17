@@ -7,15 +7,21 @@ export class EmitterPlugin {
   socketsSend: {[key:string]: SocketIO.Socket} = {};
   socketsGet: {[key:string]: SocketIO.Socket} = {};
   tokenToId: {[key:string]: string} = {};
+  target: any;
+  targetMethod: any;
   server: any;
+  name: string;
+  param: string;
 
   constructor(private params: any = {}) {
-    this.type = "emitter";
+    this.type = "server";
+    this.name = "emitter";
+    this.param = "emit";
   } 
 
-  run(server: any, app: any): void {
+  run(server: any): void {
     this.server = server;
-    this.socket = io(app);
+    this.socket = io(this.server.connection);
 
     this.socket.on("connection", (socket: SocketIO.Socket) => {
       const token = uuid();
@@ -35,44 +41,58 @@ export class EmitterPlugin {
     });
   }
 
-  loadEmit(target: any, method: string): Function {
-    if (target[method].emits) {
-      console.log(`Loading emit: ${target.alias}.on.${target[method].alias}`);
-      this.server.controllersAllowed[target.alias][target[method].alias].emits = true;
+  load(target: any, method: any): Function {
+    this.target = target;
+    this.targetMethod = target[method.methodName];
 
-    } else if (target[method].broadcast) {
-      console.log(`Loading broadcast: ${target.alias}.on.${target[method].alias}`);
-      this.server.controllersAllowed[target.alias][target[method].alias].emits = true;
+    if (this.targetMethod.emits) {
+      console.log(`Loading emit: ${target.alias}.on.${this.targetMethod.alias}`);
+      this.server.controllersAllowed[target.alias][this.targetMethod.alias].emits = true;
+
+    } else if (this.targetMethod.broadcast) {
+      console.log(`Loading broadcast: ${target.alias}.on.${this.targetMethod.alias}`);
+      this.server.controllersAllowed[target.alias][this.targetMethod.alias].emits = true;
     }
 
-    const emitCallback = (token: string, sendOne: string, data: any): any => {
-      const msg = `${target.alias}.on.${target[method].alias}`;
-      const id = this.tokenToId[token];
+    return this.emitCallback.bind(this);
+  }
 
-      if (sendOne) {
-        console.log(`Emit: ${msg} to ${sendOne}`);
-        const emitter = this.socketsGet[sendOne];
+  private emitCallback(request: any, response: any, data: any): any {
+    const msg = `${this.target.alias}.on.${this.targetMethod.alias}`;
 
-        if (emitter) {
-          emitter.emit(msg, { id, data });
-        } else {
-          this.socketsGet[id].emit(msg, { 
-            id: id,
-            data: {
-              error: 'Emit: ' + sendOne + ' not found'
-            }
-          });
-        }
-      } else if (target[method].emits) {
-        console.log(`Emit: ${msg}`);
-        this.socket.emit(msg, { id, data });
-      } else if (target[method].broadcast) {
-        console.log(`Broadcast: ${msg}`);
-        this.socketsSend[token].broadcast.emit(msg, { id, data });
+    const token = request.headers["pyrite-token"];
+    const sendOne = request.headers["pyrite-id"];
+
+    const id = this.tokenToId[token];
+
+    if (sendOne) {
+      console.log(`Emit: ${msg} to ${sendOne}`);
+
+      const emitter = this.socketsGet[sendOne];
+
+      if (!emitter) {
+        return this.socketsGet[id].emit(msg, { 
+          id: id,
+          data: {
+            error: 'Emit: ' + sendOne + ' not found'
+          }
+        });
       }
-    };
 
-    return emitCallback;
+      return emitter.emit(msg, { id, data });
+    }
+
+    if (this.targetMethod.emits) {
+      console.log(`Emit: ${msg}`);
+
+      return this.socket.emit(msg, { id, data });
+    }
+
+    if (this.targetMethod.broadcast) {
+      console.log(`Broadcast: ${msg}`);
+
+      return this.socketsSend[token].broadcast.emit(msg, { id, data });
+    }
   }
 }
 

@@ -1,19 +1,19 @@
 {
   "name": "pyrite-server-emitter",
   "description": "Pyrite Server Emitter Plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "Fabio Garcia",
   "main": "lib/src/index.js",
   "types": "lib/src/index.d.ts",
   "license": "MIT",
   "scripts": {
     "build": "tsc -w",
-    "start": "nodemon lib/example/server.js",
+    "start": "nodemon lib/example",
     "watch": "concurrently --kill-others \"npm run build\" \"npm run start\""
   },
   "dependencies": {
-    "pyrite-server": "^0.2.2",
     "@types/socket.io": "^1.4.31",
+    "pyrite-server": "^0.4.1",
     "socket.io": "^2.0.3",
     "uuid": "^3.1.0"
   },
