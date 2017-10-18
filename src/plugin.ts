@@ -11,12 +11,10 @@ export class EmitterPlugin {
 	targetMethod: any;
 	server: any;
 	type: string;
-	name: string;
 	param: string;
 
 	constructor(private params: any = {}) {
 		this.type = "server";
-		this.name = "emitter";
 		this.param = "emit";
 
 		this.connectionData = {};
