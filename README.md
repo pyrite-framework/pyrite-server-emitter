@@ -14,10 +14,10 @@ npm install pyrite-server-emitter
 ### main.js
 
 ```typescript
-import { Server } from "pyrite-server";
+import { PyriteServer } from "pyrite-server";
 import { EmitterPlugin } from "pyrite-server-emitter";
 
-const server = new Server({
+const server = new PyriteServer({
   port: 8000,
   routes: "/routes",
   plugins: [new EmitterPlugin()]
@@ -45,7 +45,7 @@ const users = [];
 let index = 0;
 
 @Route("/users")
-class Users {
+export class Users {
   @Get("/")
   getUsers(@Query("name") name) {
     const result = users.filter((user) => !name || user.name === name);
